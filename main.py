@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import filedialog
 from tkinter import ttk
 from database.database import conectar, inserir_transacao, listar_transacoes
 import matplotlib.pyplot as plt
@@ -25,6 +26,48 @@ def carregar_config():
         with open("config.json", "r") as f:
             return json.load(f)
     return {}
+
+def escolher_e_abrir_arquivo():
+    caminho = filedialog.askopenfilename(
+        title="Escolher arquivo para abrir",
+        filetypes=[("Arquivos PDF e Excel", "*.pdf *.xlsx")]
+    )
+    if caminho:
+        subprocess.Popen(['start', '', caminho], shell=True)
+        status_label.config(text=f"Abrindo: {os.path.basename(caminho)}", foreground="blue")
+    else:
+        status_label.config(text="Nenhum arquivo selecionado.", foreground="red")
+        
+def escolher_e_visualizar_excel():
+    caminho = filedialog.askopenfilename(
+            title="Escolher arquivo Excel",
+            filetypes=[("Planilhas Excel", "*.xlsx")]
+    )
+        
+    if caminho:
+        try:
+            df = pd.read_excel(caminho)
+            janela_excel = tk.Toplevel(root)
+            janela_excel.title(f"Visualizando: {os.path.basename(caminho)}")
+            frame_excel = ttk.Frame(janela_excel)
+            frame_excel.pack(fill="both", expand=True)
+
+            tabela_excel = ttk.Treeview(frame_excel, show="headings")
+            tabela_excel.pack(fill="both", expand=True)
+
+            tabela_excel["columns"] = list(df.columns)
+            for col in df.columns:
+                tabela_excel.heading(col, text=col)
+                tabela_excel.column(col, width=100)
+
+            for _, row in df.iterrows():
+                tabela_excel.insert("", "end", values=list(row))
+
+            status_label.config(text=f"Visualizando: {os.path.basename(caminho)}", foreground="blue")
+        except Exception as e:
+            status_label.config(text=f"Erro ao abrir Excel: {e}", foreground="red")
+    else:
+        status_label.config(text="Nenhum arquivo selecionado.", foreground="red")
 
 def salvar_config():
     config = {
@@ -86,6 +129,10 @@ ttk.Entry(frame_topo, textvariable=data_var).grid(row=1, column=3)
 
 ttk.Label(frame_topo, text="Descrição:").grid(row=2, column=0)
 ttk.Entry(frame_topo, textvariable=descricao_var, width=50).grid(row=2, column=1, columnspan=3)
+
+ttk.Button(frame_botoes, text="Escolher Arquivo", command=escolher_e_abrir_arquivo).grid(row=0, column=6, padx=5, pady=5)
+
+ttk.Button(frame_botoes, text="Visualizar Excel", command=escolher_e_visualizar_excel).grid(row=0, column=7, padx=5, pady=5)
 
 status_label = ttk.Label(frame_topo, text="")
 status_label.grid(row=3, column=0, columnspan=4)
@@ -242,20 +289,12 @@ def exportar_pdf():
     ultimo_arquivo_exportado = nome_arquivo
     status_label.config(text=f"Exportado para PDF: {nome_arquivo}", foreground="green")
 
-# Abrir último arquivo exportado
-def abrir_arquivo_exportado():
-    if ultimo_arquivo_exportado and os.path.exists(ultimo_arquivo_exportado):
-        subprocess.Popen(['start', '', ultimo_arquivo_exportado], shell=True)
-    else:
-        status_label.config(text="Nenhum arquivo exportado encontrado.", foreground="red")
-
 # Botões de ação
 ttk.Button(frame_botoes, text="Cadastrar", command=cadastrar_transacao).grid(row=0, column=0, padx=5, pady=5)
 ttk.Button(frame_botoes, text="Atualizar Tabela", command=atualizar_tabela).grid(row=0, column=1, padx=5, pady=5)
 ttk.Button(frame_botoes, text="Gráfico Mensal", command=mostrar_grafico_mensal).grid(row=0, column=2, padx=5, pady=5)
 ttk.Button(frame_botoes, text="Exportar Excel", command=exportar_excel).grid(row=0, column=3, padx=5, pady=5)
 ttk.Button(frame_botoes, text="Exportar PDF", command=exportar_pdf).grid(row=0, column=4, padx=5, pady=5)
-ttk.Button(frame_botoes, text="Abrir Arquivo", command=abrir_arquivo_exportado).grid(row=0, column=5, padx=5, pady=5)
 
 # Carrega filtros salvos e atualiza tabela
 config = carregar_config()
