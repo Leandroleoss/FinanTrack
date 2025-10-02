@@ -1,7 +1,15 @@
 import tkinter as tk
 from tkinter import filedialog
 from tkinter import ttk
-from database.database import conectar, inserir_transacao, listar_transacoes
+from tkinter import messagebox
+from database.database import (
+    conectar,
+    inserir_transacao,
+    listar_transacoes,
+    excluir_transacao,
+    atualizar_transacao,
+    exportar_para_csv
+)
 import matplotlib.pyplot as plt
 import pandas as pd
 from fpdf import FPDF
@@ -69,6 +77,50 @@ def escolher_e_visualizar_excel():
     else:
         status_label.config(text="Nenhum arquivo selecionado.", foreground="red")
 
+def abrir_janela_edicao(id_transacao, tipo, categoria, valor, data, descricao):
+    janela = tk.Toplevel()
+    janela.title("Editar Transação")
+
+    tk.Label(janela, text="Tipo:").grid(row=0, column=0)
+    tipo_entry = ttk.Combobox(janela, values=["Receita", "Despesa"])
+    tipo_entry.set(tipo)
+    tipo_entry.grid(row=0, column=1)
+
+    tk.Label(janela, text="Categoria:").grid(row=1, column=0)
+    categoria_entry = tk.Entry(janela)
+    categoria_entry.insert(0, categoria)
+    categoria_entry.grid(row=1, column=1)
+
+    tk.Label(janela, text="Valor:").grid(row=2, column=0)
+    valor_entry = tk.Entry(janela)
+    valor_entry.insert(0, valor)
+    valor_entry.grid(row=2, column=1)
+
+    tk.Label(janela, text="Data (YYYY-MM-DD):").grid(row=3, column=0)
+    data_entry = tk.Entry(janela)
+    data_entry.insert(0, data)
+    data_entry.grid(row=3, column=1)
+
+    tk.Label(janela, text="Descrição:").grid(row=4, column=0)
+    descricao_entry = tk.Entry(janela)
+    descricao_entry.insert(0, descricao)
+    descricao_entry.grid(row=4, column=1)
+
+    def salvar_edicao():
+        database.atualizar_transacao(
+            id_transacao,
+            tipo_entry.get(),
+            categoria_entry.get(),
+            float(valor_entry.get()),
+            data_entry.get(),
+            descricao_entry.get()
+        )
+        janela.destroy()
+        atualizar_tabela()
+
+    
+
+
 def salvar_config():
     config = {
         "tipo": filtro_tipo.get(),
@@ -78,6 +130,32 @@ def salvar_config():
     }
     with open("config.json", "w") as f:
         json.dump(config, f)
+
+def atualizar_transacao():
+    selecionado = tabela.focus()
+    if not selecionado:
+        messagebox.showwarning("Aviso", "Selecione uma transação para editar.")
+        return
+    valores = tabela.item(selecionado, "values")
+    id_transacao = int(valores[0])
+    abrir_janela_edicao(*valores)
+
+    # Aqui você pode abrir uma nova janela para editar os campos
+    # ou preencher os campos existentes com os dados e salvar
+
+def excluir_transacao_ui():
+    selecionado = tabela.focus()
+    if not selecionado:
+        messagebox.showwarning("Aviso", "Selecione uma transação para excluir.")
+        return
+    valores = tabela.item(selecionado, "values")
+    id_transacao = valores[0]
+    if messagebox.askyesno("Confirmação", "Deseja realmente excluir esta transação?"):
+        excluir_transacao(id_transacao)  # Essa é a função importada do database
+
+
+        atualizar_tabela()
+
 
 # Janela principal
 root = tk.Tk()
@@ -130,9 +208,15 @@ ttk.Entry(frame_topo, textvariable=data_var).grid(row=1, column=3)
 ttk.Label(frame_topo, text="Descrição:").grid(row=2, column=0)
 ttk.Entry(frame_topo, textvariable=descricao_var, width=50).grid(row=2, column=1, columnspan=3)
 
-ttk.Button(frame_botoes, text="Escolher Arquivo", command=escolher_e_abrir_arquivo).grid(row=0, column=6, padx=5, pady=5)
 
-ttk.Button(frame_botoes, text="Visualizar Excel", command=escolher_e_visualizar_excel).grid(row=0, column=7, padx=5, pady=5)
+
+btn_atualizar = tk.Button(frame_botoes, text="Atualizar", command=atualizar_transacao)
+btn_atualizar.pack(side=tk.LEFT, padx=5)
+
+btn_excluir = tk.Button(frame_botoes, text="Excluir", command=excluir_transacao_ui)
+
+btn_excluir.pack(side=tk.LEFT, padx=5)
+
 
 status_label = ttk.Label(frame_topo, text="")
 status_label.grid(row=3, column=0, columnspan=4)
@@ -186,7 +270,7 @@ def atualizar_tabela():
     data_fim = filtro_data_fim.get()
 
     for transacao in transacoes:
-        tipo, categoria, valor, data, descricao = transacao
+        id_transacao, tipo, categoria, valor, data, descricao = transacao
 
         if tipo_f and tipo != tipo_f:
             continue
@@ -260,6 +344,11 @@ def exportar_pdf():
     pdf.set_font("Arial", size=12)
     pdf.cell(200, 10, txt="Transações Filtradas", ln=True, align="C")
 
+def exportar_csv():
+    database.exportar_para_csv()
+    messagebox.showinfo("Exportação", "Transações exportadas com sucesso!")
+
+
     resumo = {}
 
     for linha in dados:
@@ -289,12 +378,24 @@ def exportar_pdf():
     ultimo_arquivo_exportado = nome_arquivo
     status_label.config(text=f"Exportado para PDF: {nome_arquivo}", foreground="green")
 
-# Botões de ação
-ttk.Button(frame_botoes, text="Cadastrar", command=cadastrar_transacao).grid(row=0, column=0, padx=5, pady=5)
-ttk.Button(frame_botoes, text="Atualizar Tabela", command=atualizar_tabela).grid(row=0, column=1, padx=5, pady=5)
-ttk.Button(frame_botoes, text="Gráfico Mensal", command=mostrar_grafico_mensal).grid(row=0, column=2, padx=5, pady=5)
-ttk.Button(frame_botoes, text="Exportar Excel", command=exportar_excel).grid(row=0, column=3, padx=5, pady=5)
-ttk.Button(frame_botoes, text="Exportar PDF", command=exportar_pdf).grid(row=0, column=4, padx=5, pady=5)
+frame_botoes = tk.Frame(root)
+frame_botoes.grid(row=1, column=0, pady=20)
+
+btn_cadastrar = tk.Button(frame_botoes, text="Cadastrar", command=cadastrar_transacao)
+btn_cadastrar.grid(row=0, column=0, padx=5)
+
+btn_atualizar = tk.Button(frame_botoes, text="Atualizar", command=atualizar_transacao)
+btn_atualizar.grid(row=0, column=1, padx=5)
+
+btn_excluir = tk.Button(frame_botoes, text="Excluir", command=excluir_transacao)
+btn_excluir.grid(row=0, column=2, padx=5)
+
+btn_exportar = tk.Button(frame_botoes, text="Exportar CSV", command=exportar_csv)
+btn_exportar.grid(row=0, column=3, padx=5)
+
+
+
+
 
 # Carrega filtros salvos e atualiza tabela
 config = carregar_config()
