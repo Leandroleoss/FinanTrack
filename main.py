@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkcalendar import DateEntry
 from tkinter import filedialog
 from tkinter import ttk
 from tkinter import messagebox
@@ -203,7 +204,8 @@ ttk.Label(frame_topo, text="Valor (R$):").grid(row=1, column=0)
 ttk.Entry(frame_topo, textvariable=valor_var).grid(row=1, column=1)
 
 ttk.Label(frame_topo, text="Data (dd/mm/aaaa):").grid(row=1, column=2)
-ttk.Entry(frame_topo, textvariable=data_var).grid(row=1, column=3)
+DateEntry(frame_topo, textvariable=data_var, date_pattern="dd/mm/yyyy", locale="pt_BR").grid(row=1, column=3)
+
 
 ttk.Label(frame_topo, text="Descrição:").grid(row=2, column=0)
 ttk.Entry(frame_topo, textvariable=descricao_var, width=50).grid(row=2, column=1, columnspan=3)
@@ -246,7 +248,7 @@ ttk.Label(frame_filtros, text="Data Final:").grid(row=1, column=2)
 ttk.Entry(frame_filtros, textvariable=filtro_data_fim).grid(row=1, column=3)
 
 # Tabela
-tabela = ttk.Treeview(frame_tabela, columns=("Tipo", "Categoria", "Valor", "Data", "Descrição"), show="headings")
+tabela = ttk.Treeview(frame_tabela, columns=("id", "Tipo", "Categoria", "Valor", "Data", "Descrição"), show="headings")
 for col in ("Tipo", "Categoria", "Valor", "Data", "Descrição"):
     tabela.heading(col, text=col)
 tabela.grid(row=0, column=0, sticky="nsew")
@@ -290,7 +292,7 @@ def atualizar_tabela():
             continue
 
         cor = "verde" if tipo == "Receita" else "vermelho"
-        tabela.insert("", "end", values=transacao, tags=(cor,))
+        tabela.insert("", "end", values=(id_transacao, tipo, categoria, valor, data, descricao), tags=(cor,))
 
 # Cadastrar
 def cadastrar_transacao():
