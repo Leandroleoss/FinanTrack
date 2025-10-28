@@ -157,6 +157,25 @@ def excluir_transacao_ui():
 
         atualizar_tabela()
 
+def calcular_saldo():
+    transacoes = listar_transacoes()
+    total_receita = 0
+    total_despesa = 0
+
+    for _, tipo, _, valor, _, _ in transacoes:
+        try:
+            valor_float = float(valor)
+            if tipo == "Receita":
+                total_receita += valor_float
+            elif tipo == "Despesa":
+                total_despesa += valor_float
+        except:
+            continue
+
+    saldo = total_receita - total_despesa
+    cor = "green" if saldo >= 0 else "red"
+    saldo_label.config(text=f"Saldo atual: R${saldo:.2f}", foreground=cor)
+    messagebox.showinfo("Saldo Atual", f"Receitas: R${total_receita:.2f}\nDespesas: R${total_despesa:.2f}\n\nSaldo: R${saldo:.2f}")
 
 # Janela principal
 root = tk.Tk()
@@ -222,6 +241,8 @@ btn_excluir.pack(side=tk.LEFT, padx=5)
 
 status_label = ttk.Label(frame_topo, text="")
 status_label.grid(row=3, column=0, columnspan=4)
+saldo_label = ttk.Label(frame_topo, text="Saldo atual: R$0.00", font=("Arial", 12, "bold"))
+saldo_label.grid(row=4, column=0, columnspan=4, pady=5)
 
 # Atualiza categorias
 def atualizar_categorias(*args):
@@ -347,41 +368,22 @@ def exportar_pdf():
     pdf.cell(200, 10, txt="Transações Filtradas", ln=True, align="C")
 
 def exportar_csv():
-    database.exportar_para_csv()
-    messagebox.showinfo("Exportação", "Transações exportadas com sucesso!")
-
-
-    resumo = {}
-
-    for linha in dados:
-        tipo, categoria, valor, data, descricao = linha
-        try:
-            valor_float = float(valor)
-            texto = f"{tipo} | {categoria} | R${valor_float:.2f} | {data} | {descricao}"
-            pdf.cell(200, 10, txt=texto, ln=True)
-
-            data_obj = datetime.strptime(data, "%d/%m/%Y")
-            chave = f"{tipo} - {data_obj.strftime('%m/%Y')}"
-            resumo[chave] = resumo.get(chave, 0) + valor_float
-        except:
-            continue
-
-    pdf.ln(10)
-    pdf.set_font("Arial", style="B", size=12)
-    pdf.cell(200, 10, txt="Totais Mensais por Tipo", ln=True)
-
-    for chave, total in resumo.items():
-        pdf.set_font("Arial", size=12)
-        pdf.cell(200, 10, txt=f"{chave}: R${total:.2f}", ln=True)
-
-    timestamp = datetime.now().strftime("%d-%m-%Y_%H-%M")
-    nome_arquivo = f"transacoes_filtradas_{timestamp}.pdf"
-    pdf.output(nome_arquivo)
-    ultimo_arquivo_exportado = nome_arquivo
-    status_label.config(text=f"Exportado para PDF: {nome_arquivo}", foreground="green")
+    caminho = filedialog.asksaveasfilename(
+        defaultextension=".csv",
+        filetypes=[("Arquivo CSV", "*.csv")],
+        title="Salvar como"
+    )
+    if caminho:
+        exportar_para_csv(caminho)
+        messagebox.showinfo("Exportação", f"Transações exportadas com sucesso para:\n{os.path.basename(caminho)}")
+        status_label.config(text=f"Exportado para CSV: {os.path.basename(caminho)}", foreground="green")
+    else:
+        status_label.config(text="Exportação cancelada.", foreground="red")
 
 frame_botoes = tk.Frame(root)
 frame_botoes.grid(row=1, column=0, pady=20)
+
+
 
 btn_cadastrar = tk.Button(frame_botoes, text="Cadastrar", command=cadastrar_transacao)
 btn_cadastrar.grid(row=0, column=0, padx=5)
@@ -389,13 +391,14 @@ btn_cadastrar.grid(row=0, column=0, padx=5)
 btn_atualizar = tk.Button(frame_botoes, text="Atualizar", command=atualizar_transacao)
 btn_atualizar.grid(row=0, column=1, padx=5)
 
-btn_excluir = tk.Button(frame_botoes, text="Excluir", command=excluir_transacao)
+btn_excluir = tk.Button(frame_botoes, text="Excluir", command=excluir_transacao_ui)
 btn_excluir.grid(row=0, column=2, padx=5)
 
 btn_exportar = tk.Button(frame_botoes, text="Exportar CSV", command=exportar_csv)
 btn_exportar.grid(row=0, column=3, padx=5)
 
-
+btn_saldo = tk.Button(frame_botoes, text="Calcular Saldo", command=calcular_saldo)
+btn_saldo.grid(row=0, column=4, padx=5)
 
 
 

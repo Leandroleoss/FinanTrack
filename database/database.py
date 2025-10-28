@@ -94,13 +94,13 @@ def excluir_transacao(id):
         print(f"Erro ao excluir transação: {e}")
         return 0
 
-def exportar_para_csv(nome_arquivo="transacoes_exportadas.csv"):
+def exportar_para_csv(caminho_arquivo):
     try:
         transacoes = listar_transacoes()
-        with open(nome_arquivo, mode="w", newline="", encoding="utf-8") as file:
-            writer = csv.writer(file)
+        with open(caminho_arquivo, mode="w", newline="", encoding="utf-8-sig") as file:
+            writer = csv.writer(file, delimiter=';')
             writer.writerow(["ID", "Tipo", "Categoria", "Valor", "Data", "Descrição"])
             writer.writerows(transacoes)
-        print(f"Exportado com sucesso para {nome_arquivo}")
+        print(f"Exportado com sucesso para {caminho_arquivo}")
     except Exception as e:
         print(f"Erro ao exportar para CSV: {e}")
