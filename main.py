@@ -8,8 +8,9 @@ from database.database import (
     inserir_transacao,
     listar_transacoes,
     excluir_transacao,
-    atualizar_transacao,
+    atualizar_transacao as atualizar_transacao_db,
     exportar_para_csv
+    
 )
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -107,19 +108,71 @@ def abrir_janela_edicao(id_transacao, tipo, categoria, valor, data, descricao):
     descricao_entry.insert(0, descricao)
     descricao_entry.grid(row=4, column=1)
 
-    def salvar_edicao():
-        database.atualizar_transacao(
-            id_transacao,
-            tipo_entry.get(),
-            categoria_entry.get(),
-            float(valor_entry.get()),
-            data_entry.get(),
-            descricao_entry.get()
-        )
-        janela.destroy()
-        atualizar_tabela()
+def salvar_edicao():
+    atualizar_transacao_db(
+        id_transacao,
+        tipo_entry.get(),
+        categoria_entry.get(),
+        float(valor_entry.get()),
+        data_entry.get(),
+        descricao_entry.get()
+    )
+    janela.destroy()
+    atualizar_tabela()
 
-    
+
+
+def abrir_janela_edicao(id_transacao, tipo, categoria, valor, data, descricao):
+    janela = tk.Toplevel()
+    janela.title("Editar Transação")
+
+    tk.Label(janela, text="Tipo:").grid(row=0, column=0)
+    tipo_entry = ttk.Combobox(janela, values=["Receita", "Despesa"])
+    tipo_entry.set(tipo)
+    tipo_entry.grid(row=0, column=1)
+
+    tk.Label(janela, text="Categoria:").grid(row=1, column=0)
+    categoria_entry = tk.Entry(janela)
+    categoria_entry.insert(0, categoria)
+    categoria_entry.grid(row=1, column=1)
+
+    tk.Label(janela, text="Valor:").grid(row=2, column=0)
+    valor_entry = tk.Entry(janela)
+    valor_entry.insert(0, valor)
+    valor_entry.grid(row=2, column=1)
+
+    tk.Label(janela, text="Data (YYYY-MM-DD):").grid(row=3, column=0)
+    data_entry = tk.Entry(janela)
+    data_entry.insert(0, data)
+    data_entry.grid(row=3, column=1)
+
+    tk.Label(janela, text="Descrição:").grid(row=4, column=0)
+    descricao_entry = tk.Entry(janela)
+    descricao_entry.insert(0, descricao)
+    descricao_entry.grid(row=4, column=1)
+
+    def salvar_edicao():
+        try:
+            atualizar_transacao_db(
+                id_transacao,
+                tipo_entry.get(),
+                categoria_entry.get(),
+                float(valor_entry.get()),
+                data_entry.get(),
+                descricao_entry.get()
+            )
+            status_label.config(text="Transação atualizada com sucesso!", foreground="green")
+            atualizar_tabela()
+            janela.destroy()
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao atualizar: {e}")
+
+
+    # Botão Salvar
+    btn_salvar = tk.Button(janela, text="Salvar", command=salvar_edicao)
+    btn_salvar.grid(row=5, column=1, pady=10, sticky="e")
+
+
 
 
 def salvar_config():
@@ -225,24 +278,18 @@ ttk.Entry(frame_topo, textvariable=valor_var).grid(row=1, column=1)
 ttk.Label(frame_topo, text="Data (dd/mm/aaaa):").grid(row=1, column=2)
 DateEntry(frame_topo, textvariable=data_var, date_pattern="dd/mm/yyyy", locale="pt_BR").grid(row=1, column=3)
 
-
 ttk.Label(frame_topo, text="Descrição:").grid(row=2, column=0)
 ttk.Entry(frame_topo, textvariable=descricao_var, width=50).grid(row=2, column=1, columnspan=3)
 
 
 
-btn_atualizar = tk.Button(frame_botoes, text="Atualizar", command=atualizar_transacao)
-btn_atualizar.pack(side=tk.LEFT, padx=5)
-
-btn_excluir = tk.Button(frame_botoes, text="Excluir", command=excluir_transacao_ui)
-
-btn_excluir.pack(side=tk.LEFT, padx=5)
-
-
+# Labels de status e saldo
 status_label = ttk.Label(frame_topo, text="")
-status_label.grid(row=3, column=0, columnspan=4)
+status_label.grid(row=4, column=0, columnspan=4)
+
 saldo_label = ttk.Label(frame_topo, text="Saldo atual: R$0.00", font=("Arial", 12, "bold"))
-saldo_label.grid(row=4, column=0, columnspan=4, pady=5)
+saldo_label.grid(row=5, column=0, columnspan=4, pady=5)
+
 
 # Atualiza categorias
 def atualizar_categorias(*args):
@@ -253,7 +300,8 @@ def atualizar_categorias(*args):
         categoria_menu['values'] = categorias_despesa
     categoria_var.set("")
 
-tipo_var.trace("w", atualizar_categorias)
+tipo_var.trace_add("write", lambda *args: atualizar_categorias())
+
 
 # Filtros
 ttk.Label(frame_filtros, text="Tipo:").grid(row=0, column=0)
@@ -279,6 +327,22 @@ frame_tabela.grid_columnconfigure(0, weight=1)
 
 tabela.tag_configure("verde", background="#d0f0c0")
 tabela.tag_configure("vermelho", background="#f0d0d0")
+
+#Botões
+frame_botoes = tk.Frame(root)
+frame_botoes.grid(row=1, column=0, pady=20)
+
+
+
+btn_atualizar = tk.Button(frame_botoes, text="Atualizar", command=atualizar_transacao)
+btn_atualizar.grid(row=0, column=1, padx=5)
+
+btn_excluir = tk.Button(frame_botoes, text="Excluir", command=excluir_transacao_ui)
+btn_excluir.grid(row=0, column=2, padx=5)
+
+
+btn_saldo = tk.Button(frame_botoes, text="Calcular Saldo", command=calcular_saldo)
+btn_saldo.grid(row=0, column=4, padx=5)
 
 # Atualiza tabela
 def atualizar_tabela():
@@ -325,6 +389,10 @@ def cadastrar_transacao():
         atualizar_tabela()
     except:
         status_label.config(text="Erro: valor ou data inválida.", foreground="red")
+
+# Botão Cadastrar dentro do frame_topo
+btn_cadastrar = tk.Button(frame_topo, text="Cadastrar", command=cadastrar_transacao)
+btn_cadastrar.grid(row=3, column=3, sticky="e", pady=10)
 
 # Gráfico mensal
 def mostrar_grafico_mensal():
@@ -380,25 +448,53 @@ def exportar_csv():
     else:
         status_label.config(text="Exportação cancelada.", foreground="red")
 
-frame_botoes = tk.Frame(root)
-frame_botoes.grid(row=1, column=0, pady=20)
-
-
-
-btn_cadastrar = tk.Button(frame_botoes, text="Cadastrar", command=cadastrar_transacao)
-btn_cadastrar.grid(row=0, column=0, padx=5)
-
-btn_atualizar = tk.Button(frame_botoes, text="Atualizar", command=atualizar_transacao)
-btn_atualizar.grid(row=0, column=1, padx=5)
-
-btn_excluir = tk.Button(frame_botoes, text="Excluir", command=excluir_transacao_ui)
-btn_excluir.grid(row=0, column=2, padx=5)
-
 btn_exportar = tk.Button(frame_botoes, text="Exportar CSV", command=exportar_csv)
 btn_exportar.grid(row=0, column=3, padx=5)
 
-btn_saldo = tk.Button(frame_botoes, text="Calcular Saldo", command=calcular_saldo)
-btn_saldo.grid(row=0, column=4, padx=5)
+def aplicar_filtro():
+    tipo = filtro_tipo.get()
+    categoria = filtro_categoria.get()
+    data_inicio = filtro_data_inicio.get()
+    data_fim = filtro_data_fim.get()
+
+    transacoes = listar_transacoes()
+    filtradas = []
+
+    for transacao in transacoes:
+        id_transacao, tipo_t, categoria_t, valor, data, descricao = transacao
+
+        if tipo and tipo_t != tipo:
+            continue
+        if categoria and categoria.lower() not in categoria_t.lower():
+            continue
+        try:
+            data_obj = datetime.strptime(data, "%d/%m/%Y")
+            if data_inicio:
+                ini_obj = datetime.strptime(data_inicio, "%d/%m/%Y")
+                if data_obj < ini_obj:
+                    continue
+            if data_fim:
+                fim_obj = datetime.strptime(data_fim, "%d/%m/%Y")
+                if data_obj > fim_obj:
+                    continue
+        except:
+            continue
+
+        filtradas.append(transacao)
+
+    # Atualiza a tabela com os dados filtrados
+    for linha in tabela.get_children():
+        tabela.delete(linha)
+
+    for transacao in filtradas:
+        id_transacao, tipo, categoria, valor, data, descricao = transacao
+        cor = "verde" if tipo == "Receita" else "vermelho"
+        tabela.insert("", "end", values=(id_transacao, tipo, categoria, valor, data, descricao), tags=(cor,))
+
+    status_label.config(text="Filtro aplicado com sucesso!", foreground="blue")
+
+
+
 
 
 
