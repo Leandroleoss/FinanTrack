@@ -248,10 +248,12 @@ frame_topo.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
 frame_filtros = ttk.LabelFrame(root, text="Filtros")
 frame_filtros.grid(row=1, column=0, sticky="ew", padx=10)
 
-filtro_mes = tk.StringVar()
+from tkcalendar import DateEntry
 
-ttk.Label(frame_filtros, text="Mês (MM/YYYY):").grid(row=2, column=0)
-ttk.Entry(frame_filtros, textvariable=filtro_mes).grid(row=2, column=1)
+filtro_mes = tk.StringVar()
+ttk.Label(frame_filtros, text="Mês:").grid(row=2, column=0)
+DateEntry(frame_filtros, textvariable=filtro_mes, date_pattern="dd/mm/yyyy", locale="pt_BR").grid(row=2, column=1)
+
 
 
 frame_tabela = ttk.Frame(root)
@@ -363,7 +365,13 @@ btn_saldo.grid(row=0, column=4, padx=5)
 def atualizar_tabela():
     salvar_config()
 
-    mes_filtro = filtro_mes.get().strip()
+    try:
+        data_mes = datetime.strptime(filtro_mes.get(), "%d/%m/%Y")
+        mes_filtro = data_mes.strftime("%m/%Y")
+    except:
+        messagebox.showwarning("Filtro necessário", "Por favor, selecione uma data válida.")
+        return
+
     if not mes_filtro:
         messagebox.showwarning("Filtro necessário", "Por favor, informe o mês (MM/YYYY) para visualizar as transações.")
         return
@@ -402,6 +410,7 @@ def atualizar_tabela():
 
         cor = "verde" if tipo == "Receita" else "vermelho"
         tabela.insert("", "end", values=(id_transacao, tipo, categoria, valor, data, descricao), tags=(cor,))
+
 
 
 
