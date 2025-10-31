@@ -177,6 +177,7 @@ def abrir_janela_edicao(id_transacao, tipo, categoria, valor, data, descricao):
 
 def salvar_config():
     config = {
+        "mes": filtro_mes.get(),
         "tipo": filtro_tipo.get(),
         "categoria": filtro_categoria.get(),
         "data_inicio": filtro_data_inicio.get(),
@@ -211,24 +212,29 @@ def excluir_transacao_ui():
         atualizar_tabela()
 
 def calcular_saldo():
-    transacoes = listar_transacoes()
+    linhas_visiveis = tabela.get_children()
+    if not linhas_visiveis:
+        messagebox.showinfo("Saldo", "Nenhuma transação está sendo exibida.")
+        return
+
     total_receita = 0
     total_despesa = 0
 
-    for _, tipo, _, valor, _, _ in transacoes:
-        try:
-            valor_float = float(valor)
-            if tipo == "Receita":
-                total_receita += valor_float
-            elif tipo == "Despesa":
-                total_despesa += valor_float
-        except:
-            continue
+    for linha in linhas_visiveis:
+        valores = tabela.item(linha)["values"]
+        tipo = valores[1]
+        valor = float(valores[3])
+
+        if tipo == "Receita":
+            total_receita += valor
+        elif tipo == "Despesa":
+            total_despesa += valor
 
     saldo = total_receita - total_despesa
     cor = "green" if saldo >= 0 else "red"
     saldo_label.config(text=f"Saldo atual: R${saldo:.2f}", foreground=cor)
     messagebox.showinfo("Saldo Atual", f"Receitas: R${total_receita:.2f}\nDespesas: R${total_despesa:.2f}\n\nSaldo: R${saldo:.2f}")
+
 
 # Janela principal
 root = tk.Tk()
@@ -241,6 +247,12 @@ frame_topo.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
 
 frame_filtros = ttk.LabelFrame(root, text="Filtros")
 frame_filtros.grid(row=1, column=0, sticky="ew", padx=10)
+
+filtro_mes = tk.StringVar()
+
+ttk.Label(frame_filtros, text="Mês (MM/YYYY):").grid(row=2, column=0)
+ttk.Entry(frame_filtros, textvariable=filtro_mes).grid(row=2, column=1)
+
 
 frame_tabela = ttk.Frame(root)
 frame_tabela.grid(row=2, column=0, sticky="nsew", padx=10, pady=10)
@@ -344,9 +356,18 @@ btn_excluir.grid(row=0, column=2, padx=5)
 btn_saldo = tk.Button(frame_botoes, text="Calcular Saldo", command=calcular_saldo)
 btn_saldo.grid(row=0, column=4, padx=5)
 
+
+
+
 # Atualiza tabela
 def atualizar_tabela():
     salvar_config()
+
+    mes_filtro = filtro_mes.get().strip()
+    if not mes_filtro:
+        messagebox.showwarning("Filtro necessário", "Por favor, informe o mês (MM/YYYY) para visualizar as transações.")
+        return
+
     for linha in tabela.get_children():
         tabela.delete(linha)
 
@@ -373,11 +394,19 @@ def atualizar_tabela():
                 fim_obj = datetime.strptime(data_fim, "%d/%m/%Y")
                 if data_obj > fim_obj:
                     continue
+            mes_transacao = data_obj.strftime("%m/%Y")
+            if mes_transacao != mes_filtro:
+                continue
         except:
             continue
 
         cor = "verde" if tipo == "Receita" else "vermelho"
         tabela.insert("", "end", values=(id_transacao, tipo, categoria, valor, data, descricao), tags=(cor,))
+
+
+
+btn_mostrar = tk.Button(frame_botoes, text="Mostrar Transações", command=atualizar_tabela)
+btn_mostrar.grid(row=0, column=0, padx=5)
 
 # Cadastrar
 def cadastrar_transacao():
@@ -504,7 +533,8 @@ filtro_tipo.set(config.get("tipo", ""))
 filtro_categoria.set(config.get("categoria", ""))
 filtro_data_inicio.set(config.get("data_inicio", ""))
 filtro_data_fim.set(config.get("data_fim", ""))
-atualizar_tabela()
+filtro_mes.set(config.get("mes", ""))
+#atualizar_tabela()
 
 # Inicia interface
 root.mainloop()
